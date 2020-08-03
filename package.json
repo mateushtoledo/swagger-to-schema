@@ -1,0 +1,32 @@
+{
+  "name": "swagger-to-schema",
+  "version": "1.0.0",
+  "description": "API to convert swagger v3 to JSON schema",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "senschema",
+    "swagger-to-schema",
+    "swagger",
+    "json",
+    "schema",
+    "openapi",
+    "swagger",
+    "3",
+    "validation"
+  ],
+  "author": "Mateus Henrique toledo",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "uuid": "^8.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}
