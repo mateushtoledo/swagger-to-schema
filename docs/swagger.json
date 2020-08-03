@@ -1,0 +1,300 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "description": "API de criação de JSON schema a partir de Swagger versão 3.<br/><br/>Etapas:<br/><ol><li>Enviar swagger.</li><li>Obter endpoints com corpo de requisição do swagger.</li><li>Criar JSON schema de determinado endpoint.</li></ol>",
+      "version": "1.0.0",
+      "title": "Senschema API",
+      "contact": {
+        "email": "mateus.toledo@sensedia.com"
+      }
+    },
+    "servers": [
+      {
+        "url": "https://senschema.000webhostapp.com/api",
+        "description": "Produção"
+      }
+    ],
+    "paths": {
+      "/swaggers": {
+        "post": {
+          "summary": "Validação e persistência do arquivo swagger",
+          "tags": [
+            "Swaggers"
+          ],
+          "requestBody": {
+            "description": "Swagger v3 em formato JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/swagger"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Swagger salvo com sucesso",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/createdSwagger"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Requisição incorreta",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/error"
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Erro no servidor",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/swaggers/{swaggerId}/endpoints": {
+        "get": {
+          "summary": "Obter lista de endpoints com corpo de requisição.",
+          "tags": [
+            "Endpoints"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "swaggerId",
+              "description": "Identificador do swagger.",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Lista de endpoints do swagger que possuem corpo de requisição.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/swaggerEndpoints"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Swagger não encontrado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/error"
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Erro no servidor",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/swaggers/{swaggerId}/endpoints/{endpointId}/schemas": {
+        "get": {
+          "summary": "Criar JSON schema para o corpo da requisição do endpoint.",
+          "tags": [
+            "JSON Schema"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "swaggerId",
+              "description": "Identificador do swagger.",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "path",
+              "name": "endpointId",
+              "description": "Identificador do endpoint do swagger.",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "JSON schemas de validação da requisição e das respostas do endpoint.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/jsonSchema"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Swagger ou endpoint não encontrado",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/error"
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Erro no servidor",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "swagger": {
+          "type": "object",
+          "properties": {
+            "swagger": {
+              "type": "object",
+              "description": "Objeto que representa o swagger."
+            }
+          },
+          "required": [
+            "swagger"
+          ]
+        },
+        "createdSwagger": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Identificador do swagger salvo. Vale até 23:59 do dia atual."
+            },
+            "_links": {
+              "type": "object",
+              "description": "Links para subrecursos.",
+              "properties": {
+                "_endpoints": {
+                  "type": "string",
+                  "description": "URI para obter os endpoints com corpo de requisição. Utilize o método HTTP GET."
+                }
+              },
+              "required": [
+                "_endpoints"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "_links"
+          ]
+        },
+        "swaggerEndpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Identificador do endpoint."
+              },
+              "method": {
+                "type": "string",
+                "description": "Método HTTP utilizado na requisição."
+              },
+              "path": {
+                "type": "string",
+                "description": "Caminho do endpoint."
+              },
+              "_links": {
+                "type": "object",
+                "description": "Links para subrecursos.",
+                "properties": {
+                  "_schema": {
+                    "type": "string",
+                    "description": "Endpoint para criar o JSON schema desse endpoint. Utilize o método HTTP POST."
+                  }
+                },
+                "required": [
+                  "_schema"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "method",
+              "path",
+              "_links"
+            ]
+          }
+        },
+        "jsonSchema": {
+          "description": "Schemas criados para validar requisição e/ou respostas do endpoint selecionado.",
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "object",
+              "description": "JSON schema de validação do corpo da requisição."
+            },
+            "responses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "integer",
+                    "description": "Código da resposta"
+                  },
+                  "schema": {
+                    "type": "object",
+                    "description": "JSON schema de validação do corpo da resposta."
+                  }
+                },
+                "required": [
+                  "code",
+                  "schema"
+                ]
+              }
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "mensagem": {
+              "type": "string",
+              "description": "Mensagem descritiva do erro."
+            }
+          }
+        }
+      }
+    }
+  }
