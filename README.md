@@ -6,7 +6,7 @@ A ferramenta é responsável por converter corpos de requisição/resposta em JS
 
  1. Ter o gerenciador de pacotes npm instalado.
 
-# Instalação
+# Instalação de dependências
 
 Na raíz do projeto, execute o seguinte comando:
 
