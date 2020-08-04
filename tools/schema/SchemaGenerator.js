@@ -1,4 +1,5 @@
 const ReferenceTool = require("./ReferenceTool");
+const PropertyConverter = require("./PropertyConverter");
 const JsonDebugger = require("../json/JsonDebugger");
 const REFERENCE_KEYWORD = "$ref";
 const SWAGGER_DEFINITIONS_PATH = "#/definitions/";
@@ -42,8 +43,10 @@ function addBaseStructureDetailsToSchema(schemaSkeleton, schemaBaseStructure) {
     const referenceType = schemaBaseStructure.refType;
     if (referenceType === "single") {
         if (schemaBaseStructure.body !== null) {
+            // Convert object swagger to JSON schema
+            let bodySchema = PropertyConverter.mapObjectToSchema(schemaBaseStructure.body);
             // Object merge
-            schemaSkeleton = {...schemaSkeleton, ...schemaBaseStructure.body};
+            schemaSkeleton = {...schemaSkeleton, ...bodySchema};
         } else {
             schemaSkeleton[REFERENCE_KEYWORD] = SWAGGER_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(schemaBaseStructure.references[0]);
         }
