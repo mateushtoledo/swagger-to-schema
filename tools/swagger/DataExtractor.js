@@ -1,6 +1,5 @@
 const ReferenceFinder = require("./ReferenceFinder");
 const JsonDebugger = require("../json/JsonDebugger");
-const { json } = require("express");
 const REFERENCE_KEYWORD = "$ref";
 const REFERENCE_TYPES = [
     "oneOf",

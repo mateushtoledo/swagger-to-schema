@@ -1,3 +1,5 @@
+const JsonDebugger = require("../json/JsonDebugger");
+
 const REFERENCE_KEYWORD = "$ref";
 
 /**
@@ -65,7 +67,7 @@ function searchReferenceAtArray(modelDefinition) {
         if (arrayItems[REFERENCE_KEYWORD]) {
             newReferences.push(arrayItems[REFERENCE_KEYWORD]);
         } else if (arrayItems.properties) {
-            newReferences = newReferences.concat(searchReferenceAtObject(arrayItems.properties));
+            newReferences = newReferences.concat(searchReferenceAtObject(arrayItems));
         } else {
             let refObject = getAllReferences(arrayItems);
             if (refObject.refs && refObject.refs.length > 0) {
