@@ -1,8 +1,9 @@
 const ReferenceTool = require("./ReferenceTool");
 const RegexProvider = require("./RegexProvider");
-const DataExtractor = require("../swagger/DataExtractor");
 
 const REFERENCE_KEYWORD = "$ref";
+const EXCLUSIVE_REFERENCE_KEYWORD = "not";
+const MULTIPLE_REFERENCES_KEYWORD = ["oneOf", "allOf", "anyOf"];
 const SCHEMA_DEFINITIONS_PATH = "#/definitions/";
 
 /**
@@ -125,6 +126,30 @@ function mapStringToSchema(definition, isRequired) {
 }
 
 /**
+ * Search by advanced definitions (oneOff, allOf, anyOf, not) and map it to json schema.
+ * 
+ * @param {Object} definition Item to search by advanced references.
+ * @param {Object} schemaToAdd Item to map the found items.
+ * 
+ * @returns Received object converted to JSON schema.
+ */
+function mapAdvancedDefinitionsToSchema(definition, schemaToAdd) {
+    if (definition[EXCLUSIVE_REFERENCE_KEYWORD]) {
+        schemaToAdd[EXCLUSIVE_REFERENCE_KEYWORD] = mapObjectToSchema(definition[EXCLUSIVE_REFERENCE_KEYWORD]);
+    } else {
+        for (let mr of MULTIPLE_REFERENCES_KEYWORD) {
+            if (definition[mr]) {
+                schemaToAdd[mr] = [];
+                for (let itemToMap of definition[mr]) {
+                    schemaToAdd[mr].push(mapObjectToSchema(itemToMap));
+                }
+            }
+        }
+    }
+    return schemaToAdd;
+}
+
+/**
  * Convert the array items of swagger to array items of json schema.
  * 
  * @param {Object} arrayItems Swagger definition of array items.
@@ -134,10 +159,13 @@ function mapStringToSchema(definition, isRequired) {
 function mapArrayItemsToSchema(arrayItems) {
     let arrayItemSchema = {};
 
+    if (arrayItems.properties) {
+        arrayItems.type = "object";
+    }
+
     if (arrayItems.type) {
         arrayItemSchema.type = arrayItems.type;
         if (arrayItemSchema.type !== "array") {
-            /* if (arrayItems.properties) { arrayItemSchema.properties = createSchemaProperties(arrayItems.properties, arrayItems.required ? arrayItems.required : []);} */
             return mapObjectToSchema(arrayItems);
         } else {
             arrayItemSchema.items = mapArrayItemsToSchema(arrayItems.items);
@@ -147,11 +175,7 @@ function mapArrayItemsToSchema(arrayItems) {
     if (arrayItems[REFERENCE_KEYWORD]) {
         arrayItemSchema[REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(arrayItems[REFERENCE_KEYWORD]);
     } else {
-        let references = DataExtractor.findAdvancedReferences(arrayItems);
-        if (references.type) {
-            let type = references.type;
-            arrayItemSchema[type] = references.refs;
-        }
+        arrayItemSchema = mapAdvancedDefinitionsToSchema(arrayItems, arrayItemSchema);
     }
 
     return arrayItemSchema;
@@ -207,6 +231,23 @@ function mapPropertiesToSchema(modelProperties, requiredProperties) {
             let subpropertyDefinition = {};
             subpropertyDefinition[REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(propertyDefinition[REFERENCE_KEYWORD]);
             properties[propertyName] = subpropertyDefinition;
+        } else {
+            let foundSomeItem = false;
+            let propDefinition = {};
+
+            for (let mr of MULTIPLE_REFERENCES_KEYWORD) {
+                if (propertyDefinition[mr]) {
+                    foundSomeItem = true;
+                    propDefinition[mr] = [];
+                    for (let item of propertyDefinition[mr]) {
+                        propDefinition[mr].push(mapObjectToSchema(item));
+                    }
+                }
+            }
+
+            if (foundSomeItem) {
+                properties[propertyName] = propDefinition;
+            }
         }
 
         if (propertyDefinition.type) {
@@ -249,7 +290,8 @@ function mapObjectToSchema(modelSwagger) {
         modelSchema.items = mapObjectToSchema(modelSwagger.items);
     }
 
-    return modelSchema;
+    // Mapy any advanced types of definitions: oneOf, anyOf, allOf, not.
+    return mapAdvancedDefinitionsToSchema(modelSwagger, modelSchema);
 }
 
 /**
@@ -266,6 +308,10 @@ function mapArrayToSchema(definition) {
 
     if (definition.items) {
         arrayDefinition.items = mapArrayItemsToSchema(definition.items);
+    }
+
+    if (definition.uniqueItems) {
+        arrayDefinition.uniqueItems = definition.uniqueItems;
     }
 
     return arrayDefinition;

@@ -1,5 +1,6 @@
 const REFERENCE_KEYWORD = "$ref";
-const REFERENCE_KEYWORDS = ["$ref", "not", "oneOf", "allOf", "anyOf", "not"];
+const MULTIPLE_REFERENCE_KEYWORDS = ["oneOf", "allOf", "anyOf"];
+const EXCLUSIVE_REFERENCE_KEYWORD = "not";
 const SCHEMA_DEFINITIONS_PATH = "#/definitions/";
 
 /**
@@ -24,17 +25,23 @@ function getModelNameByReference(reference) {
 function replaceSwaggerReferences(jsonSchema) {
     for (let property in jsonSchema) {
         let propertyDefinition = jsonSchema[property];
-        if (REFERENCE_KEYWORDS.indexOf(property) >= 0) {
-            if (propertyDefinition instanceof Array) {
-                let fixxedReferences = [];
-                for (let item of propertyDefinition) {
-                    fixxedReferences.push(fixJsonSchemaReference(item, true));
+
+        /* In case of errors, replace this */
+        if (property === REFERENCE_KEYWORD) {
+            jsonSchema[property] = fixJsonSchemaReference(propertyDefinition);
+        } else if (MULTIPLE_REFERENCE_KEYWORDS.indexOf(property) >= 0) {
+            for (let mr of MULTIPLE_REFERENCE_KEYWORDS) {
+                if (property === mr) {
+                    jsonSchema[property] = [];
+                    for (let item of propertyDefinition) {
+                        jsonSchema[property].push(fixJsonSchemaReference(item));
+                    }
                 }
-                jsonSchema[property] = fixxedReferences;
-            } else {
-                jsonSchema[property] = fixJsonSchemaReference(propertyDefinition);
             }
-        } else if (typeof propertyDefinition === 'object') {
+        } else if (EXCLUSIVE_REFERENCE_KEYWORD === property) {
+            console.info("Found exclusive swagger definition...");
+            jsonSchema[EXCLUSIVE_REFERENCE_KEYWORD] = fixJsonSchemaReference(propertyDefinition);
+        } else if(typeof propertyDefinition === "object") {
             jsonSchema[property] = replaceSwaggerReferences(propertyDefinition);
         }
     }
@@ -46,11 +53,10 @@ function replaceSwaggerReferences(jsonSchema) {
  * Fix a swagger reference, converting it to JSON schema reference.
  * 
  * @param {Object | String} refItem Model reference, like '#/components/schemas/error'.
- * @param {Boolean} returnObject Return the fixxed reference as a object?
  * 
  * @returns {Object | String} Reference to JSON schema model.
  */
-function fixJsonSchemaReference(refItem, returnObject = false) {
+function fixJsonSchemaReference(refItem) {
     if (typeof refItem === "string") {
         if (refItem.indexOf(SCHEMA_DEFINITIONS_PATH) < 0) {
             refItem = SCHEMA_DEFINITIONS_PATH + getModelNameByReference(refItem);
@@ -63,7 +69,7 @@ function fixJsonSchemaReference(refItem, returnObject = false) {
         return refItem;
     }
 
-    return returnObject ? { "$ref": refItem } : refItem;
+    return refItem;
 }
 
 module.exports = {

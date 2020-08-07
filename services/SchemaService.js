@@ -2,8 +2,6 @@ const DataExtractor = require("../tools/swagger/DataExtractor");
 const JsonContentTool = require("../tools/swagger/JsonContentTool");
 const SchemaGenerator = require("../tools/schema/SchemaGenerator");
 const PropertyConverter = require("../tools/schema/PropertyConverter");
-const JsonDebugger = require("../tools/json/JsonDebugger");
-
 const REFERENCE_KEYWORD = "$ref";
 
 function createModelSchemas(models) {
@@ -19,6 +17,7 @@ function createModelSchemas(models) {
 function getJsonSchema(swagger, swaggerJsonContent) {
     // Map the content to references or body (structure to init the JSON schema generation)
     let baseStructure = DataExtractor.buildSchemaBaseStructure(swaggerJsonContent);
+
     // Load the models used into this content
     let usedModels = DataExtractor.extractModels(swagger, swaggerJsonContent);
     let allModelsUsed = DataExtractor.recursiveModelExtract(swagger, usedModels, usedModels);

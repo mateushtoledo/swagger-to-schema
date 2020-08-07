@@ -1,5 +1,4 @@
 const ReferenceFinder = require("./ReferenceFinder");
-const JsonDebugger = require("../json/JsonDebugger");
 const REFERENCE_KEYWORD = "$ref";
 const REFERENCE_TYPES = [
     "oneOf",
@@ -34,7 +33,6 @@ function buildSchemaBaseStructure(jsonContentDefinition) {
     let contentSchema = jsonContentDefinition.content["application/json"].schema;
     let references = findAdvancedReferences(contentSchema);
 
-
     if (!references.refs && contentSchema[REFERENCE_KEYWORD]) {
         references.refs = [contentSchema[REFERENCE_KEYWORD]];
     } else if (!contentSchema.type && contentSchema.properties) {
@@ -47,20 +45,6 @@ function buildSchemaBaseStructure(jsonContentDefinition) {
         body: references.body ? references.body : contentSchema
     };
 }
-
-/**
- * Converts the list of references to a list of models.
- * 
- * @param {Object} fullSwagger Swagger content.
- * @param {Array} references List of model references. Ex: ['#/components/schemas/error'].
- * 
- * @returns {Array} List of models.
- 
-function extractModelsByReferences(fullSwagger, references) {
-    return references.map(function (modelRef) {
-        return extractModel(modelRef, fullSwagger)
-    });;
-}*/
 
 /**
  * Returns the content of model using the reference to it.
@@ -84,6 +68,8 @@ function extractModel(modelReference, fullSwagger) {
 /**
  * Serch by advanced references: combination or exclusion.
  * 
+ * ------------- REFACTOR AND REMOVE THIS METHOD -------------
+ * 
  * @param {Array} referencePool List of references.
  * 
  * @returns Object with standardized references.
@@ -92,7 +78,15 @@ function findAdvancedReferences(referencePool) {
     let reference = {};
 
     for (let referenceType of REFERENCE_TYPES) {
-        if (referencePool[referenceType]) {
+        let references = [];
+
+        if (Array.isArray(referencePool)) {
+            for (let item of referencePool) {
+                references.push(item);
+            }
+
+            return references;
+        } else if (referencePool[referenceType]) {
             reference.type = referenceType;
             reference.refs = findAdvancedReferences(referencePool[referenceType]);
             break;
