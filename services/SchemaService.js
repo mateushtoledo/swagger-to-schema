@@ -2,7 +2,7 @@ const DataExtractor = require("../tools/swagger/DataExtractor");
 const JsonContentTool = require("../tools/swagger/JsonContentTool");
 const SchemaGenerator = require("../tools/schema/SchemaGenerator");
 const PropertyConverter = require("../tools/schema/PropertyConverter");
-const REFERENCE_KEYWORD = "$ref";
+const OpenApiUtil = require("../util/OpenApiUtil");
 
 function createModelSchemas(models) {
     let modelSchemas = {};
@@ -15,16 +15,17 @@ function createModelSchemas(models) {
 }
 
 function getJsonSchema(swagger, swaggerJsonContent) {
-    // Map the content to references or body (structure to init the JSON schema generation)
-    let baseStructure = DataExtractor.buildSchemaBaseStructure(swaggerJsonContent);
+    // Get JSON content of request/response
+    let itemStructure = JsonContentTool.getJsonContent(swaggerJsonContent, swagger);
 
     // Load the models used into this content
     let usedModels = DataExtractor.extractModels(swagger, swaggerJsonContent);
     let allModelsUsed = DataExtractor.recursiveModelExtract(swagger, usedModels, usedModels);
 
+
     // Create schema of all models, and use it to create JSON schema
     let modelSchemas = createModelSchemas(allModelsUsed);
-    return SchemaGenerator.buildJsonSchema(baseStructure, modelSchemas);
+    return SchemaGenerator.buildJsonSchema(itemStructure, modelSchemas);
 }
 
 function createSchemaOfResponses(responses, swagger) {
@@ -35,8 +36,8 @@ function createSchemaOfResponses(responses, swagger) {
         let endpointResponseDefinition = responses[responseCode];
         if (JsonContentTool.haveJsonContent(endpointResponseDefinition, swagger)) {
             // If it's only a reference to response, extract the content
-            if (endpointResponseDefinition[REFERENCE_KEYWORD]) {
-                endpointResponseDefinition = DataExtractor.extractModel(endpointResponseDefinition[REFERENCE_KEYWORD], swagger);
+            if (endpointResponseDefinition[OpenApiUtil.REFERENCE_KEYWORD]) {
+                endpointResponseDefinition = DataExtractor.extractModel(endpointResponseDefinition[OpenApiUtil.REFERENCE_KEYWORD], swagger);
             }
 
             // Create JSON schema of this response

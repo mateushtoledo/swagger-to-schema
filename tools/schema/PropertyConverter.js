@@ -1,9 +1,7 @@
 const ReferenceTool = require("./ReferenceTool");
 const RegexProvider = require("./RegexProvider");
+const OpenApiUtil = require("../../util/OpenApiUtil");
 
-const REFERENCE_KEYWORD = "$ref";
-const EXCLUSIVE_REFERENCE_KEYWORD = "not";
-const MULTIPLE_REFERENCES_KEYWORD = ["oneOf", "allOf", "anyOf"];
 const SCHEMA_DEFINITIONS_PATH = "#/definitions/";
 
 /**
@@ -134,10 +132,10 @@ function mapStringToSchema(definition, isRequired) {
  * @returns Received object converted to JSON schema.
  */
 function mapAdvancedDefinitionsToSchema(definition, schemaToAdd) {
-    if (definition[EXCLUSIVE_REFERENCE_KEYWORD]) {
-        schemaToAdd[EXCLUSIVE_REFERENCE_KEYWORD] = mapObjectToSchema(definition[EXCLUSIVE_REFERENCE_KEYWORD]);
+    if (definition[OpenApiUtil.EXCLUDE_SCHEMA_KEYWORD]) {
+        schemaToAdd[OpenApiUtil.EXCLUDE_SCHEMA_KEYWORD] = mapObjectToSchema(definition[OpenApiUtil.EXCLUDE_SCHEMA_KEYWORD]);
     } else {
-        for (let mr of MULTIPLE_REFERENCES_KEYWORD) {
+        for (let mr of OpenApiUtil.COMBINE_SCHEMAS_KEYWORDS) {
             if (definition[mr]) {
                 schemaToAdd[mr] = [];
                 for (let itemToMap of definition[mr]) {
@@ -172,8 +170,8 @@ function mapArrayItemsToSchema(arrayItems) {
         }
     }
 
-    if (arrayItems[REFERENCE_KEYWORD]) {
-        arrayItemSchema[REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(arrayItems[REFERENCE_KEYWORD]);
+    if (arrayItems[OpenApiUtil.REFERENCE_KEYWORD]) {
+        arrayItemSchema[OpenApiUtil.REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(arrayItems[OpenApiUtil.REFERENCE_KEYWORD]);
     } else {
         arrayItemSchema = mapAdvancedDefinitionsToSchema(arrayItems, arrayItemSchema);
     }
@@ -220,22 +218,22 @@ function mapIntegerToSchema(definition) {
  * @returns {Object} Properties of object in json schema.
  */
 function mapPropertiesToSchema(modelProperties, requiredProperties) {
-    properties = {};
+    let properties = {};
 
     for (let propertyName in modelProperties) {
         let propertyDefinition = modelProperties[propertyName];
 
-        if (propertyDefinition === REFERENCE_KEYWORD) {
-            properties[REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(propertyDefinition);
-        } else if (propertyDefinition[REFERENCE_KEYWORD]) {
+        if (propertyName === OpenApiUtil.REFERENCE_KEYWORD) {
+            properties[OpenApiUtil.REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(propertyDefinition);
+        } else if (propertyDefinition[OpenApiUtil.REFERENCE_KEYWORD]) {
             let subpropertyDefinition = {};
-            subpropertyDefinition[REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(propertyDefinition[REFERENCE_KEYWORD]);
+            subpropertyDefinition[OpenApiUtil.REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + ReferenceTool.getModelNameByReference(propertyDefinition[OpenApiUtil.REFERENCE_KEYWORD]);
             properties[propertyName] = subpropertyDefinition;
         } else {
             let foundSomeItem = false;
             let propDefinition = {};
 
-            for (let mr of MULTIPLE_REFERENCES_KEYWORD) {
+            for (let mr of OpenApiUtil.COMBINE_SCHEMAS_KEYWORDS) {
                 if (propertyDefinition[mr]) {
                     foundSomeItem = true;
                     propDefinition[mr] = [];
@@ -270,12 +268,15 @@ function mapObjectToSchema(modelSwagger) {
     let modelSchema = {};
     let requiredProperties = modelSwagger.required ? modelSwagger.required : [];
 
-    if (modelSwagger[REFERENCE_KEYWORD]) {
-        modelSchema[REFERENCE_KEYWORD] = modelSwagger[REFERENCE_KEYWORD];
+    if (modelSwagger[OpenApiUtil.REFERENCE_KEYWORD]) {
+        modelSchema[OpenApiUtil.REFERENCE_KEYWORD] = modelSwagger[OpenApiUtil.REFERENCE_KEYWORD];
     }
 
     if (modelSwagger.type) {
         modelSchema.type = modelSwagger.type;
+        if (modelSchema.type !== "array" && modelSchema.type !== "object") {
+            return mapPropertyToSchema(modelSwagger, false);
+        }
     }
 
     if (modelSwagger.properties) {

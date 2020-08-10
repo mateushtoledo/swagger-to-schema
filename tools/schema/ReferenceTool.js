@@ -1,6 +1,5 @@
-const REFERENCE_KEYWORD = "$ref";
-const MULTIPLE_REFERENCE_KEYWORDS = ["oneOf", "allOf", "anyOf"];
-const EXCLUSIVE_REFERENCE_KEYWORD = "not";
+const OpenApiUtil = require("../../util/OpenApiUtil");
+
 const SCHEMA_DEFINITIONS_PATH = "#/definitions/";
 
 /**
@@ -27,10 +26,10 @@ function replaceSwaggerReferences(jsonSchema) {
         let propertyDefinition = jsonSchema[property];
 
         /* In case of errors, replace this */
-        if (property === REFERENCE_KEYWORD) {
+        if (property === OpenApiUtil.REFERENCE_KEYWORD) {
             jsonSchema[property] = fixJsonSchemaReference(propertyDefinition);
-        } else if (MULTIPLE_REFERENCE_KEYWORDS.indexOf(property) >= 0) {
-            for (let mr of MULTIPLE_REFERENCE_KEYWORDS) {
+        } else if (OpenApiUtil.COMBINE_SCHEMAS_KEYWORDS.indexOf(property) >= 0) {
+            for (let mr of OpenApiUtil.COMBINE_SCHEMAS_KEYWORDS) {
                 if (property === mr) {
                     jsonSchema[property] = [];
                     for (let item of propertyDefinition) {
@@ -38,9 +37,9 @@ function replaceSwaggerReferences(jsonSchema) {
                     }
                 }
             }
-        } else if (EXCLUSIVE_REFERENCE_KEYWORD === property) {
+        } else if (OpenApiUtil.EXCLUDE_SCHEMA_KEYWORD === property) {
             console.info("Found exclusive swagger definition...");
-            jsonSchema[EXCLUSIVE_REFERENCE_KEYWORD] = fixJsonSchemaReference(propertyDefinition);
+            jsonSchema[OpenApiUtil.EXCLUDE_SCHEMA_KEYWORD] = fixJsonSchemaReference(propertyDefinition);
         } else if(typeof propertyDefinition === "object") {
             jsonSchema[property] = replaceSwaggerReferences(propertyDefinition);
         }
@@ -61,10 +60,10 @@ function fixJsonSchemaReference(refItem) {
         if (refItem.indexOf(SCHEMA_DEFINITIONS_PATH) < 0) {
             refItem = SCHEMA_DEFINITIONS_PATH + getModelNameByReference(refItem);
         }
-    } else if (typeof refItem === "object" && refItem[REFERENCE_KEYWORD]) {
-        let reference = refItem[REFERENCE_KEYWORD];
+    } else if (typeof refItem === "object" && refItem[OpenApiUtil.REFERENCE_KEYWORD]) {
+        let reference = refItem[OpenApiUtil.REFERENCE_KEYWORD];
         if (reference.indexOf(SCHEMA_DEFINITIONS_PATH) < 0) {
-            refItem[REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + getModelNameByReference(reference);
+            refItem[OpenApiUtil.REFERENCE_KEYWORD] = SCHEMA_DEFINITIONS_PATH + getModelNameByReference(reference);
         }
         return refItem;
     }

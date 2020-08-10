@@ -1,16 +1,21 @@
 const ReferenceFinder = require("./ReferenceFinder");
-const REFERENCE_KEYWORD = "$ref";
-const REFERENCE_TYPES = [
-    "oneOf",
-    "allOf",
-    "anyOf",
-    "not"
-];
+const OpenApiUtil = require("../../util/OpenApiUtil");
+
+// const JsonDebugger = require("../json/JsonDebugger");
 
 function extractModels(fullSwagger, modelReference) {
     let models = {};
+    let referencesFound = [];
 
-    let referencesFound = extractRecursive(modelReference.content);
+    if (modelReference[OpenApiUtil.REFERENCE_KEYWORD]) {
+        // Extract model to navigate in it
+        let model = extractModel(modelReference[OpenApiUtil.REFERENCE_KEYWORD], fullSwagger);
+        referencesFound = extractRecursive(model);
+    } else {
+        // Navigate at content
+        referencesFound = extractRecursive(modelReference.content);
+    }
+
     if (referencesFound.length > 0) {
         for (let ref of referencesFound) {
             if (ref.trim().length > 0) {
@@ -23,30 +28,6 @@ function extractModels(fullSwagger, modelReference) {
 }
 
 /**
- * Returns content or references associated with the request or response.
- * 
- * @param {Object} jsonContentDefinition Json content definition at swagger.
- * 
- * @returns {object} Object that defines the reference type (single, all of, any of) and reference list.
- */
-function buildSchemaBaseStructure(jsonContentDefinition) {
-    let contentSchema = jsonContentDefinition.content["application/json"].schema;
-    let references = findAdvancedReferences(contentSchema);
-
-    if (!references.refs && contentSchema[REFERENCE_KEYWORD]) {
-        references.refs = [contentSchema[REFERENCE_KEYWORD]];
-    } else if (!contentSchema.type && contentSchema.properties) {
-        contentSchema.type = "object";
-    }
-
-    return {
-        refType: references.type ? references.type : "single",
-        references: references.refs ? references.refs : [],
-        body: references.body ? references.body : contentSchema
-    };
-}
-
-/**
  * Returns the content of model using the reference to it.
  * 
  * @param {String} modelReference Model reference (swagger path). Ex: '#/components/schemas/error'.
@@ -55,45 +36,17 @@ function buildSchemaBaseStructure(jsonContentDefinition) {
  * @returns {Object} Model definition.
  */
 function extractModel(modelReference, fullSwagger) {
-    let modelPath = getReferenceSegments(modelReference);
-    let model = fullSwagger;
+    // Extract model path using reference
+    let segments = modelReference.split("/");
+    let modelPath = segments.filter(segment => (segment.length > 0 && segment !== "#"));
 
+    // Navigate to model using your path
+    let model = fullSwagger;
     for (let pathSegment of modelPath) {
         model = model[pathSegment];
     }
 
     return model;
-}
-
-/**
- * Serch by advanced references: combination or exclusion.
- * 
- * ------------- REFACTOR AND REMOVE THIS METHOD -------------
- * 
- * @param {Array} referencePool List of references.
- * 
- * @returns Object with standardized references.
- */
-function findAdvancedReferences(referencePool) {
-    let reference = {};
-
-    for (let referenceType of REFERENCE_TYPES) {
-        let references = [];
-
-        if (Array.isArray(referencePool)) {
-            for (let item of referencePool) {
-                references.push(item);
-            }
-
-            return references;
-        } else if (referencePool[referenceType]) {
-            reference.type = referenceType;
-            reference.refs = findAdvancedReferences(referencePool[referenceType]);
-            break;
-        }
-    }
-
-    return reference;
 }
 
 /**
@@ -107,7 +60,7 @@ function extractRecursive(swaggerData) {
     let references = [];
 
     for (let prop in swaggerData) {
-        if (prop !== "responses" && prop === REFERENCE_KEYWORD) {
+        if (prop !== "responses" && prop === OpenApiUtil.REFERENCE_KEYWORD) {
             references.push(swaggerData[prop]);
         } else if (typeof swaggerData[prop] === "object") {
             references = references.concat(extractRecursive(swaggerData[prop]));
@@ -115,18 +68,6 @@ function extractRecursive(swaggerData) {
     }
 
     return references;
-}
-
-/**
- * Converts a swagger reference to an array with reference segments.
- * 
- * @param {String} referenceString Model reference (swagger path). Ex: '#/components/schemas/error'.
- * 
- * @returns {Array} Reference segments. Ex: ['components', 'schemas', 'error'].
- */
-function getReferenceSegments(referenceString) {
-    let segments = referenceString.split("/");
-    return segments.filter(segment => (segment.length > 0 && segment !== "#"));
 }
 
 /**
@@ -140,7 +81,7 @@ function getReferenceSegments(referenceString) {
  */
 function recursiveModelExtract(swagger, knownModels, searchIn) {
     // Stop criterion: All models loaded
-    let newReferences = ReferenceFinder.findReferences(searchIn);
+    let newReferences = ReferenceFinder.findReferencesInModels(searchIn);
     if (newReferences.length === 0) {
         return knownModels;
     }
@@ -159,9 +100,7 @@ function recursiveModelExtract(swagger, knownModels, searchIn) {
 }
 
 module.exports = {
-    buildSchemaBaseStructure: buildSchemaBaseStructure,
     extractModel: extractModel,
     extractModels: extractModels,
-    findAdvancedReferences: findAdvancedReferences,
     recursiveModelExtract: recursiveModelExtract
 };

@@ -1,5 +1,5 @@
 const DataExtractor = require("../swagger/DataExtractor");
-const REFERENCE_KEYWORD = "$ref";
+const OpenApiUtil = require("../../util/OpenApiUtil");
 
 /**
  * Navigate to item at swagger and check if it's a json content schema.
@@ -27,13 +27,29 @@ function haveJsonContent(item, swagger) {
 
     if (item.content && item.content["application/json"] && item.content["application/json"].schema) {
         return true;
-    } else if (item[REFERENCE_KEYWORD]) {
-        return searchOfJsonContentByReference(item[REFERENCE_KEYWORD], swagger);
+    } else if (item[OpenApiUtil.REFERENCE_KEYWORD]) {
+        return searchOfJsonContentByReference(item[OpenApiUtil.REFERENCE_KEYWORD], swagger);
     } else {
         return false;
     }
 }
 
+function getJsonContent(itemToGet, swagger) {
+    if (!itemToGet) {
+        return {};
+    }
+
+    if (itemToGet.content && itemToGet.content["application/json"] && itemToGet.content["application/json"].schema) {
+        return itemToGet.content["application/json"].schema;
+    } else if (itemToGet[OpenApiUtil.REFERENCE_KEYWORD]) {
+        let modelDefinition = DataExtractor.extractModel(itemToGet[OpenApiUtil.REFERENCE_KEYWORD], swagger);
+        return getJsonContent(modelDefinition);
+    } else {
+        return {};
+    }
+}
+
 module.exports = {
-    haveJsonContent: haveJsonContent
+    haveJsonContent: haveJsonContent,
+    getJsonContent: getJsonContent
 };
